@@ -1,0 +1,427 @@
+<style id="jsbin-css">
+#canvas {
+    background: url('https://storywarren.com/wp-content/uploads/2016/09/space-1.jpg') no-repeat;
+    width: 100%;
+    height: 100%;
+    background-size: cover;
+}
+
+#canvas.podczas_gry {
+    cursor: url('https://i.imgur.com/UwVM0iX.png') 17.5 17.5,auto !important;
+}
+</style>
+<!DOCTYPE html>
+<!--
+Created using JS Bin
+http://jsbin.com
+
+Copyright (c) 2019 by anonymous (http://jsbin.com/webunolepa/3/edit)
+
+Released under the MIT license: http://jsbin.mit-license.org
+-->
+<meta name="robots" content="noindex">
+<body>
+    <canvas id="canvas"></canvas>
+<script id="jsbin-javascript">
+window.addEventListener("DOMContentLoaded", gra);
+
+var grafika = new Image();
+var grafikaWybuch = new Image();
+grafika.src = 'https://i.imgur.com/80gomwq.png';
+
+window.onload = function() {
+    grafikaWybuch.src = 'https://i.imgur.com/Ofsa9Pi.png';
+};
+
+function gra() {
+    var canvas = document.getElementById('canvas');
+    var ctx    = canvas.getContext('2d');
+    var cH     = ctx.canvas.height = window.innerHeight;
+    var cW     = ctx.canvas.width  = window.innerWidth;
+
+    var pociski    = [],
+        asteroidy  = [],
+        wybuchy = [],
+        zniszczone  = 0,
+        rekord     = 0,
+        liczba      = 0,
+        podczas_gry    = false,
+        koniec_gry   = false,
+        planeta    = {deg: 0};
+
+    var gracz = {
+        pozycjaX   : -35,
+        pozycjaY  : -(100+82),
+        width  : 70,
+        height : 79,
+        deg    : 0
+    };
+
+    canvas.addEventListener('click', akcja);
+    canvas.addEventListener('mousemove', akcja);
+    window.addEventListener("resize", update);
+
+    function update() {
+        cH = ctx.canvas.height = window.innerHeight;
+        cW = ctx.canvas.width  = window.innerWidth;
+    }
+
+    function poruszanie(e) {
+        gracz.deg = Math.atan2(e.offsetX - (cW/2), -(e.offsetY - (cH/2)));
+    }
+
+    function akcja(e) { 
+        e.preventDefault();
+        if(podczas_gry) {
+            var pocisk = {
+                x: -8,
+                y: -179,
+                wymiarX : 2,
+                wymiarY : 10,
+                rzeczywistyX : e.offsetX,
+                rzeczywistyY : e.offsetY,
+                deg   : Math.atan2(e.offsetX - (cW/2), -(e.offsetY - (cH/2))),
+                zniszczone: false
+            };
+
+            pociski.push(pocisk);
+        } else {
+            var dist;
+            if(koniec_gry) {
+                dist = Math.sqrt(((e.offsetX - cW/2) * (e.offsetX - cW/2)) + ((e.offsetY - (cH/2 + 45 + 22)) * (e.offsetY - (cH/2+ 45 + 22))));
+                if (dist < 27) {
+                    if(e.type == 'click') {
+                        koniec_gry   = false;
+                        liczba      = 0;
+                        pociski    = [];
+                        asteroidy  = [];
+                        wybuchy = [];
+                        zniszczone  = 0;
+                        gracz.deg = 0;
+                        canvas.removeEventListener('contextmenu', akcja);
+                        canvas.removeEventListener('mousemove', poruszanie);
+                        canvas.style.cursor = "default";
+                    } else {
+                        canvas.style.cursor = "pointer";
+                    }
+                } else {
+                    canvas.style.cursor = "default";
+                }
+            } else {
+                dist = Math.sqrt(((e.offsetX - cW/2) * (e.offsetX - cW/2)) + ((e.offsetY - cH/2) * (e.offsetY - cH/2)));
+
+                if (dist < 27) {
+                    if(e.type == 'click') {
+                        podczas_gry = true;
+                        canvas.removeEventListener("mousemove", akcja);
+                        canvas.addEventListener('contextmenu', akcja);
+                        canvas.addEventListener('mousemove', poruszanie);
+                        canvas.setAttribute("class", "podczas_gry");
+                        canvas.style.cursor = "default";
+                    } else {
+                        canvas.style.cursor = "pointer";
+                    }
+                } else {
+                    canvas.style.cursor = "default";
+                }
+            }
+        }
+    }
+
+    function strzal() {
+        var dystans;
+
+        for(var i = 0; i < pociski.length; i++) {
+            if(!pociski[i].zniszczone) {
+                ctx.save();
+                ctx.translate(cW/2,cH/2);
+                ctx.rotate(pociski[i].deg);
+			
+                ctx.drawImage(
+                    grafika,
+                    211,
+                    100,
+                    50,
+                    75,
+                    pociski[i].x,
+                    pociski[i].y -= 20,
+                    19,
+                    30
+                );
+				
+                ctx.restore();
+
+                pociski[i].rzeczywistyX = (0) - (pociski[i].y + 10) * Math.sin(pociski[i].deg);
+                pociski[i].rzeczywistyY = (0) + (pociski[i].y + 10) * Math.cos(pociski[i].deg);
+
+                pociski[i].rzeczywistyX += cW/2;
+                pociski[i].rzeczywistyY += cH/2;
+
+                for(var j = 0; j < asteroidy.length; j++) {
+                    if(!asteroidy[j].zniszczone) {
+                        dystans = Math.sqrt(Math.pow(
+                                asteroidy[j].rzeczywistyX - pociski[i].rzeczywistyX, 2) +
+                            Math.pow(asteroidy[j].rzeczywistyY - pociski[i].rzeczywistyY, 2)
+                        );
+
+                        if (dystans < (((asteroidy[j].width/asteroidy[j].rozmiar) / 2) - 4) + ((19 / 2) - 4)) {
+                            zniszczone += 1;
+                            asteroidy[j].zniszczone = true;
+                            pociski[i].zniszczone   = true;
+                            wybuchy.push(asteroidy[j]);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    function _planeta() {
+        ctx.save();
+        ctx.fillStyle   = 'white';
+        ctx.shadowBlur    = 100;
+        ctx.shadowOffsetX = 0;
+        ctx.shadowOffsetY = 0;
+        ctx.shadowColor   = "#999";
+        ctx.arc(
+            (cW/2),
+            (cH/2),
+            100,
+            0,
+            Math.PI * 2
+        );
+		
+        ctx.fill();
+
+        ctx.translate(cW/2,cH/2);
+        ctx.rotate((planeta.deg += 0.1) * (Math.PI / 180));
+        ctx.drawImage(grafika, 0, 0, 200, 200, -100, -100, 200,200);
+        ctx.restore();
+    }
+
+    function _gracz() {
+        ctx.save();
+        ctx.translate(cW/2,cH/2);
+        ctx.rotate(gracz.deg);
+        
+      ctx.drawImage(
+            grafika,
+            200,
+            0,
+            gracz.width,
+            gracz.height,
+            gracz.pozycjaX,
+            gracz.pozycjaY,
+            gracz.width,
+            gracz.height
+        );
+
+        ctx.restore();
+		
+        if(pociski.length - zniszczone && podczas_gry) {
+            strzal();
+        }
+    }
+
+    function nowaAsteroida() {
+        var typ = random(1,4);
+        var wspolrzedneX;
+        var wspolrzedneY;
+
+        switch(typ){
+            case 1:
+                wspolrzedneX = random(0, cW);
+                wspolrzedneY = 0 - 150;
+                break;
+            case 2:
+                wspolrzedneX = cW + 150;
+                wspolrzedneY = random(0, cH);
+                break;
+            case 3:
+                wspolrzedneX = random(0, cW);
+                wspolrzedneY = cH + 150;
+                break;
+            case 4:
+                wspolrzedneX = 0 - 150;
+                wspolrzedneY = random(0, cH);
+                break;
+        }
+
+        var asteroida = {
+            x: 278,
+            y: 0,
+            stan: 0,
+            stanX: 0,
+            width: 134,
+            height: 123,
+            rzeczywistyX: wspolrzedneX,
+            rzeczywistyY: wspolrzedneY,
+            przesunY: 0,
+            wspolrzedneX: wspolrzedneX,
+            wspolrzedneY: wspolrzedneY,
+            rozmiar: random(1, 3),
+            deg: Math.atan2(wspolrzedneX  - (cW/2), -(wspolrzedneY - (cH/2))),
+            zniszczone: false
+        };
+        asteroidy.push(asteroida);
+    }
+
+    function _asteroidy() {
+        var dystans;
+
+        for(var i = 0; i < asteroidy.length; i++) {
+            if (!asteroidy[i].zniszczone) {
+                ctx.save();
+                ctx.translate(asteroidy[i].wspolrzedneX, asteroidy[i].wspolrzedneY);
+                ctx.rotate(asteroidy[i].deg);
+
+                ctx.drawImage(
+                    grafika,
+                    asteroidy[i].x,
+                    asteroidy[i].y,
+                    asteroidy[i].width,
+                    asteroidy[i].height,
+                    -(asteroidy[i].width / asteroidy[i].rozmiar) / 2,
+                    asteroidy[i].przesunY += 1/(asteroidy[i].rozmiar),
+                    asteroidy[i].width / asteroidy[i].rozmiar,
+                    asteroidy[i].height / asteroidy[i].rozmiar
+                );
+
+                ctx.restore();
+
+                asteroidy[i].rzeczywistyX = (0) - (asteroidy[i].przesunY + ((asteroidy[i].height / asteroidy[i].rozmiar)/2)) * Math.sin(asteroidy[i].deg);
+                asteroidy[i].rzeczywistyY = (0) + (asteroidy[i].przesunY + ((asteroidy[i].height / asteroidy[i].rozmiar)/2)) * Math.cos(asteroidy[i].deg);
+
+                asteroidy[i].rzeczywistyX += asteroidy[i].wspolrzedneX;
+                asteroidy[i].rzeczywistyY += asteroidy[i].wspolrzedneY;
+
+                dystans = Math.sqrt(Math.pow(asteroidy[i].rzeczywistyX -  cW/2, 2) + Math.pow(asteroidy[i].rzeczywistyY - cH/2, 2));
+                if (dystans < (((asteroidy[i].width/asteroidy[i].rozmiar) / 2) - 4) + 100) {
+                    koniec_gry = true;
+                    podczas_gry  = false;
+                    canvas.addEventListener('mousemove', akcja);
+                }
+            } else if(!asteroidy[i].extinct) {
+                wybuch(asteroidy[i]);
+            }
+        }
+
+        if(asteroidy.length - zniszczone < 10 + (Math.floor(zniszczone/6))) {
+            nowaAsteroida();
+        }
+    }
+
+    function wybuch(asteroida) {
+        ctx.save();
+        ctx.translate(asteroida.rzeczywistyX, asteroida.rzeczywistyY);
+        ctx.rotate(asteroida.deg);
+
+        var grafikaY = 256;
+        var grafikaX = 256;
+        if(asteroida.stan == 0) {
+            grafikaY = 0;
+            grafikaX = 0;
+        } else if (asteroida.stan < 8) {
+            grafikaY = 0;
+        } else if(asteroida.stan < 16) {
+            grafikaY = 256;
+        } else if(asteroida.stan < 24) {
+            grafikaY = 512;
+        } else {
+            grafikaY = 768;
+        }
+
+        if(asteroida.stan == 8 || asteroida.stan == 16 || asteroida.stan == 24) {
+            asteroida.stanX = 0;
+        }
+		
+        ctx.drawImage(
+            grafikaWybuch,
+            asteroida.stanX += grafikaX,
+            grafikaY,
+            256,
+            256,
+            - (asteroida.width / asteroida.rozmiar)/2,
+            -(asteroida.height / asteroida.rozmiar)/2,
+            asteroida.width / asteroida.rozmiar,
+            asteroida.height / asteroida.rozmiar
+        );
+        asteroida.stan += 1;
+
+        if(asteroida.stan == 31) {
+            asteroida.extinct = true;
+        }
+
+        ctx.restore();
+    }
+
+    function start() {
+        if(!koniec_gry) {
+            ctx.clearRect(0, 0, cW, cH);
+            ctx.beginPath();
+
+            _planeta();
+
+            _gracz();
+
+            if(podczas_gry) {
+                _asteroidy();
+                ctx.font = "20px Verdana";
+                ctx.fillStyle = "white";
+                ctx.textBaseline = 'middle';
+                ctx.textAlign = "left";
+                ctx.fillText('Rekord: '+rekord+'', 20, 30);
+                ctx.font = "40px Verdana";
+                ctx.fillStyle = "white";
+                ctx.strokeStyle = "black";
+                ctx.textAlign = "center";
+                ctx.textBaseline = 'middle';
+                ctx.strokeText(''+zniszczone+'', cW/2,cH/2);
+                ctx.fillText(''+zniszczone+'', cW/2,cH/2);
+
+            } else {
+                ctx.drawImage(grafika, 428, 12, 70, 70, cW/2 - 35, cH/2 - 35, 70,70);
+            }
+        } 
+		  else if(liczba < 1) {
+            liczba = 1;
+            ctx.fillStyle = 'rgba(0,0,0,0.75)';
+            ctx.rect(0,0, cW,cH);
+            ctx.fill();
+
+            ctx.font = "60px Verdana";
+            ctx.fillStyle = "white";
+            ctx.textAlign = "center";
+            ctx.fillText("PRZEGRAŁEŚ",cW/2,cH/2 - 150);
+
+            ctx.font = "20px Verdana";
+            ctx.fillStyle = "white";
+            ctx.textAlign = "center";
+            ctx.fillText("Zniszczone asteroidy: "+ zniszczone, cW/2,cH/2 + 140);
+
+            rekord = zniszczone > rekord ? zniszczone : rekord;
+
+            ctx.font = "20px Verdana";
+            ctx.fillStyle = "white";
+            ctx.textAlign = "center";
+            ctx.fillText("Rekord: "+ rekord, cW/2,cH/2 + 185);
+
+            ctx.drawImage(grafika, 500, 18, 70, 70, cW/2 - 35, cH/2 + 40, 70,70);
+
+            canvas.removeAttribute('class');
+        }
+    }
+
+    function init() {
+        window.requestAnimationFrame(init);
+        start();
+    }
+
+    init();
+  
+    function random(przedzial_poczatek, przedzial_koniec) {
+        return Math.floor(Math.random() * (przedzial_koniec - przedzial_poczatek + 1)) + przedzial_poczatek;
+    }
+}
+</script>
+</body>
